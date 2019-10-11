@@ -3,23 +3,25 @@ local posix = require('posix')
 local http_utils = require('nginx_upload.http_utils')
 
 local UPSTREAM = ngx.var.upstream
--- TODO: generate this.
-local boundary = 'foobar_boundary'
 local FILENAME = ngx.var.filename
 local headers = ngx.req.get_headers()
 
---ngx.req.read_body()
+local gen_boundary = function()
+    local t = {"BOUNDARY-"}
+    for i=2,17 do t[i] = string.char(math.random(65, 90)) end
+    t[18] = "-BOUNDARY"
+    return table.concat(t)
+end
 
+local boundary = gen_boundary()
 local content_type = headers['Content-Type']
 local temp = ngx.req.get_body_file()
 
--- Create hardlink to nginx temp file containing body. This will preserve the
--- file after nginx cleans it up.
 local fd, ntmp = posix.mkstemp(temp .. '_XXXXXX')
 posix.close(fd)
 -- Documentation explicitly states not to do this, however, ngx.req.read_body()
--- and lua_need_request_body on both clean up the file even when
--- client_body_in_file_only on which is contrary to nginx documentation. In
+-- and 'lua_need_request_body on' both clean up the file even when
+-- 'client_body_in_file_only on' which is contrary to nginx documentation. In
 -- any case, this is the only way to prevent the file from being cleaned up.
 os.rename(temp, ntmp)
 
