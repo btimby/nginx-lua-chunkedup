@@ -7,9 +7,8 @@ local FILENAME = ngx.var.filename
 local headers = ngx.req.get_headers()
 
 local gen_boundary = function()
-    local t = {"BOUNDARY-"}
-    for i=2,17 do t[i] = string.char(math.random(65, 90)) end
-    t[18] = "-BOUNDARY"
+    local t = {}
+    for i=1,17 do t[i] = string.char(math.random(97, 122)) end
     return table.concat(t)
 end
 
@@ -33,7 +32,7 @@ parts.file[1]['filepath'] = ntmp
 parts.file[1]['size'] = lfs.attributes(ntmp).size
 
 ngx.req.set_header('Transfer-Encoding', nil)
-ngx.req.set_header('Content-Type', 'multipart/mixed; boundary=' .. boundary)
+ngx.req.set_header('Content-Type', 'multipart/form-data; boundary=' .. boundary)
 
 local body = http_utils.form_multipart_body(parts, boundary)
 local r = ngx.location.capture(UPSTREAM, {method=ngx.HTTP_POST, body=body})
