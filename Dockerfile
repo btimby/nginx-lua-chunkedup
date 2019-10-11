@@ -16,4 +16,6 @@ RUN curl -o /tmp/nginx-lua-upload-module.zip -L \
     nginx-lua-upload-module-master/nginx_upload/* && \
     rm -f /tmp/nginx-lua-upload-module.zip
 
+COPY lua/nginx_lua_chunkedup.lua /usr/local/openresty/lualib/
+
 EXPOSE 80:80
