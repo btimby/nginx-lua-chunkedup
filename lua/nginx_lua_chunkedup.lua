@@ -3,8 +3,15 @@ local posix = require('posix')
 local http_utils = require('nginx_upload.http_utils')
 
 local UPSTREAM = ngx.var.upstream
-local FILENAME = ngx.var.filename
-local headers = ngx.req.get_headers()
+local HEADERS = ngx.req.get_headers()
+
+-- By default use the file name from request path.
+local FILENAME = ngx.var.path
+if (HEADERS['X-File-Name'] ~= nil)
+then
+    -- However, if an X-File-Name header is present use that.
+    FILENAME = HEADERS['X-File-Name']
+end
 
 local gen_boundary = function()
     local t = {}
@@ -13,7 +20,7 @@ local gen_boundary = function()
 end
 
 local boundary = gen_boundary()
-local content_type = headers['Content-Type']
+local content_type = HEADERS['Content-Type']
 local temp = ngx.req.get_body_file()
 
 local fd, ntmp = posix.mkstemp(temp .. '_XXXXXX')
@@ -35,8 +42,6 @@ ngx.req.set_header('Transfer-Encoding', nil)
 ngx.req.set_header('Content-Type', 'multipart/form-data; boundary=' .. boundary)
 
 local body = http_utils.form_multipart_body(parts, boundary)
-ngx.log(ngx.ERR, boundary)
-ngx.log(ngx.ERR, body)
 local r = ngx.location.capture(UPSTREAM, {method=ngx.HTTP_POST, body=body})
 ngx.status = r.status
 ngx.print(r.body)

@@ -15,8 +15,8 @@ post:
 
 .PHONY: put
 put:
-	curl -X PUT -H "Transfer-Encoding: chunked" -H 'Content-Type: text-plain' \
-		 -d @fixtures/hello.txt http://localhost/upload/foobar.txt
+	curl -X PUT -H "Transfer-Encoding: chunked" -H 'Content-Type: text-plain' -H 'X-File-Name: foobar.txt' \
+		 -d @fixtures/hello.txt http://localhost/upload/
 
 .PHONY: check
 check:
