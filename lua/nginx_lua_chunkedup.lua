@@ -35,6 +35,8 @@ ngx.req.set_header('Transfer-Encoding', nil)
 ngx.req.set_header('Content-Type', 'multipart/form-data; boundary=' .. boundary)
 
 local body = http_utils.form_multipart_body(parts, boundary)
+ngx.log(ngx.ERR, boundary)
+ngx.log(ngx.ERR, body)
 local r = ngx.location.capture(UPSTREAM, {method=ngx.HTTP_POST, body=body})
 ngx.status = r.status
 ngx.print(r.body)
