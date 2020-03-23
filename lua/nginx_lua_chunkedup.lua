@@ -63,6 +63,9 @@ local body = http_utils.form_multipart_body(parts, boundary)
 local r = ngx.location.capture(UPSTREAM, {method=ngx.HTTP_POST, body=body})
 ngx.status = r.status
 
+for k, v in pairs(r.header) do
+    ngx.header[k] = v
+end
 
 if math.floor(ngx.status / 100) ~= 2 then
     os.remove(ntmp)
