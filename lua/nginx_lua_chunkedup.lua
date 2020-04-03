@@ -2,6 +2,13 @@ local lfs = require('lfs')
 local posix = require('posix')
 local http_utils = require('nginx_upload.http_utils')
 
+-- Determines what method to use for subrequest.
+local METHOD_MAP = {}
+METHOD_MAP['POST'] = ngx.HTTP_POST
+METHOD_MAP['PUT'] = ngx.HTTP_POST
+METHOD_MAP['PATCH'] = ngx.HTTP_PATCH
+local method = ngx.req.get_method()
+
 -- Fetch params.
 local UPSTREAM = ngx.var.upstream
 
@@ -59,11 +66,15 @@ parts.file[1]['size'] = size
 ngx.req.set_header('Transfer-Encoding', nil)
 ngx.req.set_header('Content-Type', 'multipart/form-data; boundary=' .. boundary)
 
+-- Determine subrequest method based on request method.
+method = METHOD_MAP[method]
 local body = http_utils.form_multipart_body(parts, boundary)
-local r = ngx.location.capture(UPSTREAM, {method=ngx.HTTP_POST, body=body})
+local r = ngx.location.capture(UPSTREAM, {method=method, body=body})
+
+-- Pass along the status
 ngx.status = r.status
 
-
+-- If status is not 2XX, remove the temp file.
 if math.floor(ngx.status / 100) ~= 2 then
     os.remove(ntmp)
     ngx.log(ngx.ERR, 'returning status "', ngx.status, '"')

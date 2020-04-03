@@ -15,9 +15,27 @@ post:
 
 .PHONY: put
 put:
-	curl -X PUT -H "Transfer-Encoding: chunked" -H 'Content-Type: text-plain' -H 'X-File-Name: foobar.txt' \
+	curl -X PUT -H "Transfer-Encoding: chunked" -H 'Content-Type: text/plain' -H 'X-File-Name: foobar.txt' \
 		 -d @fixtures/hello.txt http://localhost/upload/
+
+.PHONY: patch
+patch:
+	curl -X PATCH -H "Transfer-Encoding: chunked" -H "Content-Type: text/plain" -H "X-File-Name: foobar.txt" \
+		-H "Range: bytes=10-" -d @fixtures/hello.txt http://localhost/upload/
 
 .PHONY: check
 check:
 	luacheck --globals ngx -- lua/nginx_lua_chunkedup.lua 
+
+# Aliases
+.PHONY: POST
+POST: post
+
+.PHONY: PUT
+PUT: put
+
+.PHONY: PATCH
+PATCH: patch
+
+.PHONY: lint
+lint: check
