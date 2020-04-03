@@ -73,6 +73,10 @@ local r = ngx.location.capture(UPSTREAM, {method=method, body=body})
 
 -- Pass along the status
 ngx.status = r.status
+-- Pass along headers
+for k, v in pairs(r.header) do
+    ngx.header[k] = v
+end
 
 -- If status is not 2XX, remove the temp file.
 if math.floor(ngx.status / 100) ~= 2 then
