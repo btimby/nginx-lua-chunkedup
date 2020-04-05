@@ -5,7 +5,7 @@ local http_utils = require('nginx_upload.http_utils')
 -- Determines what method to use for subrequest.
 local METHOD_MAP = {}
 METHOD_MAP['POST'] = ngx.HTTP_POST
-METHOD_MAP['PUT'] = ngx.HTTP_POST
+METHOD_MAP['PUT'] = ngx.HTTP_PUT
 METHOD_MAP['PATCH'] = ngx.HTTP_PATCH
 local method = ngx.req.get_method()
 
