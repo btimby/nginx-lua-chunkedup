@@ -54,6 +54,14 @@ posix.close(fd)
 -- any case, this is the only way to prevent the file from being cleaned up.
 os.rename(temp, ntmp)
 
+-- We are now responsible for cleaning up ntmp...
+local function cleanup()
+    os.remove(ntmp)
+    ngx.log(ngx.ERR, 'client went away, cleaning up')
+    ngx.exit(499)
+end
+ngx.on_abort(cleanup)
+
 -- Build form for POSTing to upstream.
 local parts = {file={{}}}
 local boundary = gen_boundary()
