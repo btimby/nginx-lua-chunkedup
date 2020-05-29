@@ -47,12 +47,6 @@ local temp = ngx.req.get_body_file()
 local size = lfs.attributes(temp).size
 
 local fd, ntmp = posix.mkstemp(temp .. '_XXXXXX')
-posix.close(fd)
--- Documentation explicitly states not to do this, however, ngx.req.read_body()
--- and 'lua_need_request_body on' both clean up the file even when
--- 'client_body_in_file_only on' which is contrary to nginx documentation. In
--- any case, this is the only way to prevent the file from being cleaned up.
-os.rename(temp, ntmp)
 
 -- We are now responsible for cleaning up ntmp...
 local function cleanup()
@@ -61,6 +55,13 @@ local function cleanup()
     ngx.exit(499)
 end
 ngx.on_abort(cleanup)
+
+posix.close(fd)
+-- Documentation explicitly states not to do this, however, ngx.req.read_body()
+-- and 'lua_need_request_body on' both clean up the file even when
+-- 'client_body_in_file_only on' which is contrary to nginx documentation. In
+-- any case, this is the only way to prevent the file from being cleaned up.
+os.rename(temp, ntmp)
 
 -- Build form for POSTing to upstream.
 local parts = {file={{}}}
