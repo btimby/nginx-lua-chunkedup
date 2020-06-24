@@ -47,6 +47,15 @@ local temp = ngx.req.get_body_file()
 local size = lfs.attributes(temp).size
 
 local fd, ntmp = posix.mkstemp(temp .. '_XXXXXX')
+
+-- We are now responsible for cleaning up ntmp...
+local function cleanup()
+    os.remove(ntmp)
+    ngx.log(ngx.ERR, 'client went away, cleaning up')
+    ngx.exit(499)
+end
+ngx.on_abort(cleanup)
+
 posix.close(fd)
 -- Documentation explicitly states not to do this, however, ngx.req.read_body()
 -- and 'lua_need_request_body on' both clean up the file even when
@@ -69,7 +78,9 @@ ngx.req.set_header('Content-Type', 'multipart/form-data; boundary=' .. boundary)
 -- Determine subrequest method based on request method.
 method = METHOD_MAP[method]
 local body = http_utils.form_multipart_body(parts, boundary)
-local r = ngx.location.capture(UPSTREAM, {method=method, body=body})
+local r = ngx.location.capture(UPSTREAM, {
+    method=method, body=body, args=ngx.req.get_uri_args()
+})
 
 -- Pass along the status
 ngx.status = r.status
