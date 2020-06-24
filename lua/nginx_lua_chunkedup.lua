@@ -78,7 +78,9 @@ ngx.req.set_header('Content-Type', 'multipart/form-data; boundary=' .. boundary)
 -- Determine subrequest method based on request method.
 method = METHOD_MAP[method]
 local body = http_utils.form_multipart_body(parts, boundary)
-local r = ngx.location.capture(UPSTREAM, {method=method, body=body})
+local r = ngx.location.capture(UPSTREAM, {
+    method=method, body=body, args=ngx.req.get_uri_args()
+})
 
 -- Pass along the status
 ngx.status = r.status
