@@ -7,10 +7,12 @@ local METHOD_MAP = {}
 METHOD_MAP['POST'] = ngx.HTTP_POST
 METHOD_MAP['PUT'] = ngx.HTTP_PUT
 METHOD_MAP['PATCH'] = ngx.HTTP_PATCH
+
 local method = ngx.req.get_method()
 
 -- Fetch params.
 local UPSTREAM = ngx.var.upstream
+local TEMPDIR = ngx.var.tempdir or '/tmp'
 
 if (UPSTREAM == nil) then
     ngx.log(ngx.ERR, 'upstream missing. Please set var in nginx.conf')
@@ -43,10 +45,19 @@ local gen_boundary = function()
     return table.concat(t)
 end
 
-local temp = ngx.req.get_body_file()
-local size = lfs.attributes(temp).size
+ngx.status = 200
+ngx.send_headers()
+ngx.flush(true)
 
-local fd, ntmp = posix.mkstemp(temp .. '_XXXXXX')
+-- Once we open the socket, we have no further opportunity to control headers.
+local size = 0
+local sock, err = ngx.req.socket(true)
+if not sock then
+    ngx.log(ngx.ERR, 'Could not read request: ' .. err)
+    ngx.exit(500)
+end
+
+local fd, ntmp = posix.mkstemp(TEMPDIR .. '/upload_XXXXXX')
 
 -- We are now responsible for cleaning up ntmp...
 local function cleanup()
@@ -56,12 +67,34 @@ local function cleanup()
 end
 ngx.on_abort(cleanup)
 
+while (true) do
+    local data, typ, err
+
+    -- Read chunk size
+    data, typ, err  = sock:receive('*l')
+    if not data then
+        -- Error
+        break
+    end
+    -- Chunk sizes are in hex (base 16)
+    local chunk_size = tonumber(data, 16)
+
+    if chunk_size == 0 then
+        -- Success!
+        break
+    end
+
+    size = size + chunk_size
+
+    -- Read chunk
+    data, typ, err = sock:receive(chunk_size)
+    posix.write(fd, data)
+
+    -- Read trailing \r\n
+    sock:receive(2)
+end
+
 posix.close(fd)
--- Documentation explicitly states not to do this, however, ngx.req.read_body()
--- and 'lua_need_request_body on' both clean up the file even when
--- 'client_body_in_file_only on' which is contrary to nginx documentation. In
--- any case, this is the only way to prevent the file from being cleaned up.
-os.rename(temp, ntmp)
 
 -- Build form for POSTing to upstream.
 local parts = {file={{}}}
@@ -82,19 +115,16 @@ local r = ngx.location.capture(UPSTREAM, {
     method=method, body=body, args=ngx.req.get_uri_args()
 })
 
--- Pass along the status
-ngx.status = r.status
--- Pass along headers
-for k, v in pairs(r.header) do
-    ngx.header[k] = v
+-- If status is not 2XX, remove the temp file.
+if math.floor(r.status / 100) ~= 2 then
+    os.remove(ntmp)
+    ngx.log(ngx.ERR, 'returning status "', r.status, '"')
 end
 
--- If status is not 2XX, remove the temp file.
-if math.floor(ngx.status / 100) ~= 2 then
-    os.remove(ntmp)
-    ngx.log(ngx.ERR, 'returning status "', ngx.status, '"')
-    ngx.exit(ngx.status)
-else
-    ngx.print(r.body)
-    return ngx.OK
-end
+-- Output is chunked
+sock:send(string.format('%x', #r.body) .. '\r\n')
+sock:send(r.body .. '\r\n')
+sock:send('0\r\n')
+sock:send('\r\n')
+
+ngx.exit(r.status)

@@ -11,16 +11,16 @@ run: build
 
 .PHONY: post
 post:
-	curl -X POST -F 'file=@fixtures/hello.txt' http://localhost/upload/?foo=bar
+	curl -i -X POST -F 'file=@fixtures/hello.txt' http://localhost/upload/?foo=bar
 
 .PHONY: put
 put:
-	curl -X PUT -H "Transfer-Encoding: chunked" -H 'Content-Type: text/plain' -H 'X-File-Name: foobar.txt' \
+	curl -i -X PUT -H "Transfer-Encoding: chunked" -H 'Content-Type: text/plain' -H 'X-File-Name: foobar.txt' \
 		 -d @fixtures/hello.txt http://localhost/upload/?foo=bar
 
 .PHONY: patch
 patch:
-	curl -X PATCH -H "Transfer-Encoding: chunked" -H "Content-Type: text/plain" -H "X-File-Name: foobar.txt" \
+	curl -i -X PATCH -H "Transfer-Encoding: chunked" -H "Content-Type: text/plain" -H "X-File-Name: foobar.txt" \
 		-H "Range: bytes=10-" -d @fixtures/hello.txt http://localhost/upload/?foo=bar
 
 .PHONY: check
