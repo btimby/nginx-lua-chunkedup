@@ -57,7 +57,7 @@ if not sock then
     ngx.exit(500)
 end
 
-local fd, ntmp = posix.mkstemp(TEMPDIR .. '/upload_XXXXXX')
+local fd, ntmp = posix.mkstemp(TEMPDIR .. '/chunkedup_XXXXXX')
 
 -- We are now responsible for cleaning up ntmp...
 local function cleanup()
@@ -74,10 +74,13 @@ while (true) do
     data, typ, err  = sock:receive('*l')
     if not data then
         -- Error
-        break
+        ngx.log(ngx.ERR, 'Error receiving: ' .. err)
+        ngx.exit(500)
     end
+    ngx.log(ngx.ERR, 'Data: ' .. data)
     -- Chunk sizes are in hex (base 16)
     local chunk_size = tonumber(data, 16)
+    ngx.log(ngx.INFO, 'Chunk size: ' .. data)
 
     if chunk_size == 0 then
         -- Success!
@@ -88,10 +91,18 @@ while (true) do
 
     -- Read chunk
     data, typ, err = sock:receive(chunk_size)
+    if not data then
+        ngx.log(ngx.ERR, 'Error receiving:' .. err)
+        ngx.exit(500)
+    end
     posix.write(fd, data)
 
     -- Read trailing \r\n
-    sock:receive(2)
+    data, _, _ = sock:receive(2)
+    if not data == '\r\n' then
+        ngx.log(ngx.ERR, 'Data corruption: ' .. data)
+        ngx.exit(500)
+    end
 end
 
 posix.close(fd)
