@@ -77,7 +77,7 @@ while (true) do
         ngx.log(ngx.ERR, 'Error receiving: ' .. err)
         ngx.exit(500)
     end
-    ngx.log(ngx.ERR, 'Data: ' .. data)
+
     -- Chunk sizes are in hex (base 16)
     local chunk_size = tonumber(data, 16)
     ngx.log(ngx.INFO, 'Chunk size: ' .. data)
