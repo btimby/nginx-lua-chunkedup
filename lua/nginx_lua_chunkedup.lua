@@ -11,10 +11,10 @@ METHOD_MAP['PATCH'] = ngx.HTTP_PATCH
 local method = ngx.req.get_method()
 
 -- Fetch params.
-local UPSTREAM = ngx.var.upstream
-local TEMPDIR = ngx.var.tempdir or '/tmp'
+local BACKEND_URL = ngx.var.backend_url
+local UPLOAD_STORE = ngx.var.upload_store or '/tmp'
 
-if (UPSTREAM == nil) then
+if (BACKEND_URL == nil) then
     ngx.log(ngx.ERR, 'upstream missing. Please set var in nginx.conf')
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
@@ -58,7 +58,7 @@ if not sock then
     ngx.exit(500)
 end
 
-local fd, ntmp = posix.mkstemp(TEMPDIR .. '/chunkedup_XXXXXX')
+local fd, ntmp = posix.mkstemp(UPLOAD_STORE .. '/chunkedup_XXXXXX')
 
 -- We are now responsible for cleaning up ntmp...
 local function cleanup()
@@ -123,7 +123,7 @@ ngx.req.set_header('Content-Type', 'multipart/form-data; boundary=' .. boundary)
 -- Determine subrequest method based on request method.
 method = METHOD_MAP[method]
 local body = http_utils.form_multipart_body(parts, boundary)
-local r = ngx.location.capture(UPSTREAM, {
+local r = ngx.location.capture(BACKEND_URL, {
     method=method, body=body, args=ngx.req.get_uri_args()
 })
 
