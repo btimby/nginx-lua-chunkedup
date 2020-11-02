@@ -14,7 +14,7 @@ local method = ngx.req.get_method()
 local BACKEND_URL = ngx.var.backend_url
 local UPLOAD_STORE = ngx.var.upload_store or '/tmp'
 
-if (BACKEND_URL == nil) then
+if (BACKEND_URL == nil or BACKEND_URL == '') then
     ngx.log(ngx.ERR, 'upstream missing. Please set var in nginx.conf')
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
