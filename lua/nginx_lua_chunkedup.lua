@@ -46,7 +46,6 @@ local gen_boundary = function()
 end
 
 ngx.status = 200
-ngx.header['Transfer-Encoding'] = 'chunked'
 ngx.send_headers()
 ngx.flush(true)
 
