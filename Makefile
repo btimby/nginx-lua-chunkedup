@@ -15,7 +15,7 @@ post:
 
 .PHONY: put
 put:
-	curl -i -X PUT -H "Transfer-Encoding: chunked" -H 'Content-Type: text/plain' -H 'X-File-Name: foobar.txt' \
+	curl -i -X PUT -H "Transfer-Encoding: chunked" -H 'Cookie: foo=bar' -H 'Content-Type: text/plain' -H 'X-File-Name: foobar.txt' \
 		 --data-binary @fixtures/hello.txt http://localhost/upload/?foo=bar
 
 .PHONY: patch
