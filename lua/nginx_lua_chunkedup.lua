@@ -71,11 +71,23 @@ local function ping()
 
     local htp = http.new()
     local scheme, host, port, path, args = unpack(htp:parse_uri(url))
+    local options = {
+        method='GET',
+        path=path,
+    }
+
+    local cookie = headers['Cookie']
+    if (cookie == nil) then
+        ngx.log(ngx.WARN, 'No active session, keepalive skipped')
+        return
+    end
+    options['headers'] = { Cookie=cookie }
 
     while (true) do
         local res, htpErr = htp:request(host, port, {
             method='GET',
             path=path,
+            headers=reqHeaders,
         })
 
         if htpErr then
