@@ -1,7 +1,6 @@
 local lfs = require('lfs')
 local posix = require('posix')
 local http_utils = require('nginx_upload.http_utils')
-local http = require('resty.httpipe')
 
 -- Determines what method to use for subrequest.
 local METHOD_MAP = {}
@@ -69,34 +68,7 @@ local function ping()
         return
     end
 
-    local htp = http.new()
-    local scheme, host, port, path, args = unpack(htp:parse_uri(url))
-    local options = {
-        method='GET',
-        path=path,
-    }
-
-    local cookie = headers['Cookie']
-    if (cookie == nil) then
-        ngx.log(ngx.WARN, 'No active session, keepalive skipped')
-        return
-    end
-    options['headers'] = { Cookie=cookie }
-
-    while (true) do
-        local res, htpErr = htp:request(host, port, {
-            method='GET',
-            path=path,
-            headers=reqHeaders,
-        })
-
-        if htpErr then
-            ngx.log(ngx.ERR, 'Error in session keepalive: ' .. htpErr)
-        end
-
-        -- Sleep for 5 minutes.
-        ngx.sleep(5 * 60)
-    end
+    local res = ngx.location.capture(url)
 end
 
 -- We are now responsible for cleaning up ntmp...

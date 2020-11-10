@@ -8,7 +8,6 @@ RUN opm get openresty/lua-resty-upload
 RUN luarocks install luafilesystem
 RUN luarocks install luaposix
 RUN luarocks install lpeg
-RUN luarocks install lua-resty-httpipe
 
 RUN curl -o /tmp/nginx-lua-upload-module.zip -L \
     https://github.com/btimby/nginx-lua-upload-module/archive/master.zip && \
