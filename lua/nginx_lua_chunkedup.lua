@@ -68,7 +68,13 @@ local function ping()
         return
     end
 
-    local res = ngx.location.capture(url)
+    while (true) do
+        -- Sleep for 5 minutes.
+        ngx.sleep(5 * 60)
+
+        -- Do keepalive.
+        local res = ngx.location.capture(url)
+    end
 end
 
 -- We are now responsible for cleaning up ntmp...
