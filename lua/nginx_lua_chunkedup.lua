@@ -22,16 +22,19 @@ end
 -- By default use the file name from request path.
 local filename = ngx.var.path
 local content_type = 'application/octet-stream'
+local content_length = nil
 local headers = ngx.req.get_headers()
 
-if (headers['X-File-Name'] ~= nil)
-then
+if (headers['X-File-Name'] ~= nil) then
     -- However, if an X-File-Name header is present use that.
     filename = headers['X-File-Name']
 end
-if (headers['Content-Type'] ~= nil)
-then
+if (headers['Content-Type'] ~= nil) then
     content_type = headers['Content-Type']
+end
+if (headers['Content-Length'] ~= nil) then
+    -- Content-Length is defined as 0 when uploading an empty file.
+    content_length = headers['Content-Length']
 end
 
 if (filename == nil) then
@@ -87,41 +90,54 @@ ngx.on_abort(cleanup)
 
 local keepalive = ngx.thread.spawn(ping)
 
-while (true) do
-    local data, typ, err
-
-    -- Read chunk size
-    data, typ, err  = sock:receive('*l')
-    if not data then
+if content_length ~= nil then
+    -- "normal" request.
+    data, err, partial = sock:receive(content_length)
+    if err then
         -- Error
-        ngx.log(ngx.ERR, 'Error receiving: ' .. err)
-        ngx.exit(500)
+        ngx.log(ngx.ERR, 'Error receiving: ' .. err .. ' Partial: ' .. partial)
+        ngx.exit(200)
     end
 
-    -- Chunk sizes are in hex (base 16)
-    local chunk_size = tonumber(data, 16)
-    ngx.log(ngx.INFO, 'Chunk size: ' .. data)
-
-    if chunk_size == 0 then
-        -- Success!
-        break
-    end
-
-    size = size + chunk_size
-
-    -- Read chunk
-    data, typ, err = sock:receive(chunk_size)
-    if not data then
-        ngx.log(ngx.ERR, 'Error receiving:' .. err)
-        ngx.exit(500)
-    end
     posix.write(fd, data)
+else
+    -- Transfer-Encoding: chunked
+    while (true) do
+        local data, typ, err
 
-    -- Read trailing \r\n
-    data, _, _ = sock:receive(2)
-    if not data == '\r\n' then
-        ngx.log(ngx.ERR, 'Data corruption: ' .. data)
-        ngx.exit(500)
+        -- Read chunk size
+        data, err, partial  = sock:receive('*l')
+        if err then
+            -- Error
+            ngx.log(ngx.ERR, 'Error receiving: ' .. err .. ' Partial: ' .. partial)
+            ngx.exit(200)
+        end
+
+        -- Chunk sizes are in hex (base 16)
+        local chunk_size = tonumber(data, 16)
+        ngx.log(ngx.INFO, 'Chunk size: ' .. data)
+
+        if chunk_size == 0 then
+            -- Success!
+            break
+        end
+
+        size = size + chunk_size
+
+        -- Read chunk
+        data, err, partial = sock:receive(chunk_size)
+        if err then
+            ngx.log(ngx.ERR, 'Error receiving:' .. err .. ' Partial: ' .. partial)
+            ngx.exit(200)
+        end
+        posix.write(fd, data)
+
+        -- Read trailing \r\n
+        data, err, _ = sock:receive(2)
+        if not data == '\r\n' then
+            ngx.log(ngx.ERR, 'Data corruption: ' .. data)
+            ngx.exit(200)
+        end
     end
 end
 
