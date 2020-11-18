@@ -103,7 +103,7 @@ if content_length ~= nil then
 else
     -- Transfer-Encoding: chunked
     while (true) do
-        local data, typ, err
+        local data, err, partial
 
         -- Read chunk size
         data, err, partial  = sock:receive('*l')
