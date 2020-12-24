@@ -162,15 +162,21 @@ local r = ngx.location.capture(BACKEND_URL, {
     method=method, body=body, args=ngx.req.get_uri_args()
 })
 
+local body
 -- If status is not 2XX, remove the temp file.
 if math.floor(r.status / 100) ~= 2 then
     os.remove(ntmp)
     ngx.log(ngx.ERR, 'returning status "', r.status, '"')
+    -- API returns errors like: {"detail":"Must provide exactly one file."}
+    -- Let's merge the HTTP status code into the JSON.
+    body = '{"status":' .. r.status .. ',' .. r.body:sub(2)
+else
+    body = r.body
 end
 
 -- Output is chunked
-sock:send(string.format('%x', #r.body) .. '\r\n')
-sock:send(r.body .. '\r\n')
+sock:send(string.format('%x', #body) .. '\r\n')
+sock:send(body .. '\r\n')
 sock:send('0\r\n')
 sock:send('\r\n')
 
