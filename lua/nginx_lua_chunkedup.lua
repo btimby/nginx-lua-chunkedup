@@ -61,7 +61,7 @@ posix.close(fd)
 -- and 'lua_need_request_body on' both clean up the file even when
 -- 'client_body_in_file_only on' which is contrary to nginx documentation. In
 -- any case, this is the only way to prevent the file from being cleaned up.
-os.rename(temp, ntmp)
+os.link(temp, ntmp)
 
 -- Build form for POSTing to upstream.
 local parts = {file={{}}}
