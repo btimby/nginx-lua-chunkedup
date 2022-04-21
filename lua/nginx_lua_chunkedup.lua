@@ -43,6 +43,29 @@ local gen_boundary = function()
     return table.concat(t)
 end
 
+-- Poll backend to keep session alive.
+local function ping()
+    local url = ngx.var.keepalive_url
+
+    if url == nil or url == '' then
+        ngx.log(ngx.WARN, 'Keepalive disabled.')
+        return
+    end
+
+    while (true) do
+        -- Sleep for 5 minutes.
+        ngx.sleep(5 * 60)
+
+        -- Do keepalive.
+        local res = ngx.location.capture(url)
+    end
+end
+
+-- Ensure session remains valid.
+local keepalive = ngx.thread.spawn(ping)
+
+-- This instructs nginx to receive the request body into a temp file.
+ngx.req.read_body()
 local temp = ngx.req.get_body_file()
 local size = lfs.attributes(temp).size
 
@@ -74,6 +97,9 @@ parts.file[1]['size'] = size
 
 ngx.req.set_header('Transfer-Encoding', nil)
 ngx.req.set_header('Content-Type', 'multipart/form-data; boundary=' .. boundary)
+
+-- Keepalive is no longer needed.
+ngx.thread.kill(keepalive)
 
 -- Determine subrequest method based on request method.
 method = METHOD_MAP[method]
